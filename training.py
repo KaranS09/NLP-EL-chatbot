@@ -63,7 +63,7 @@ for doc in documents:
     training.append([bag, output_row])
 # shuffle our features and turn into np.array
 random.shuffle(training)
-training = np.array(training)
+training = np.asarray(training, dtype="object")
 # create train and test lists. X - patterns, Y - intents
 train_x = list(training[:,0])
 train_y = list(training[:,1])
@@ -78,19 +78,23 @@ model.add(Dropout(0.5))
 model.add(Dense(len(train_y[0]), activation='softmax'))
 # Compile model. Stochastic gradient descent with Nesterov accelerated gradient gives good results for this model
 #sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+import tensorflow as tf
+
 initial_learning_rate = 0.01
-decay_rate = 1e-6
-momentum = 0.9
-nesterov = True
+decay_steps = 10000
+decay_rate = 0.9
+staircase = True  # Whether to apply staircase decay (default is False)
 
-learning_rate_schedule = ExponentialDecay(
+lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
     initial_learning_rate,
-    decay_steps=1,
+    decay_steps=decay_steps,
     decay_rate=decay_rate,
-    staircase=False)
+    staircase=staircase)
 
-sgd = SGD(learning_rate=learning_rate_schedule, momentum=momentum, nesterov=nesterov)
+# Compile model using SGD optimizer with Nesterov momentum and exponential decay learning rate
+sgd = SGD(learning_rate=lr_schedule, momentum=0.9, nesterov=True)
 model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+
 #fitting and saving the model 
 hist = model.fit(np.array(train_x), np.array(train_y), epochs=200, batch_size=5, verbose=1)
 model.save('model.h5', hist)

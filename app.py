@@ -5,9 +5,10 @@ lemmatizer = WordNetLemmatizer()
 import pickle
 import numpy as np
 from keras.models import load_model
-model = load_model('model.h5')
+model = load_model('model_new.h5')
 import json
 import random
+import sentiment
 
 
 
@@ -79,15 +80,32 @@ def chatbot_response(msg):
     return chatbotResponse
 
     
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
+
+
 app = Flask(__name__)
 app.static_folder = 'static'
-@app.route("/")
+app.secret_key = 'lololol898989'
+
+
+
+@app.route("/chatbot")
 def home():
-    return render_template("index.html")
+    return render_template("index.html", state = session['user_state'])
 @app.route("/get")
 def get_bot_response():
     userText = request.args.get('msg')
+    sent = sentiment.analyze_sentiment(userText)
+    if sent == "Positive":
+        session['pos_count'] = session['pos_count'] + 1
+    if sent == "Negative":
+        session['neg_count'] = session['neg_count'] + 1
+    if session['pos_count'] == session['neg_count']:
+        session['user_state'] = "neutral"
+    elif session['pos_count'] > session['neg_count']:
+        session['user_state'] = "Happy"
+    else:
+        session['user_state'] = "Sad"
     print("get_bot_response:- " + userText)
 
     bot_response_translate = "Loading bot response..........."  
@@ -96,6 +114,13 @@ def get_bot_response():
     print(chatbot_response_text)
 
     return chatbot_response_text
+
+@app.route('/')
+def dashboard():
+    session['user_state'] = "neutral"
+    session['pos_count'] = 0
+    session['neg_count'] = 0
+    return render_template('dashboard.html')
 
 
 
